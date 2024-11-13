@@ -1,4 +1,4 @@
-# app.py
+
 import streamlit as st
 import requests
 import pandas as pd
@@ -16,13 +16,13 @@ if st.button("Search"):
         papers = response.json()
         st.session_state['papers'] = papers
         
-        # Display papers in a table
+        
         df = pd.DataFrame(papers)
         st.dataframe(df[['title', 'published', 'authors']])
     else:
         st.error("Error: Unable to fetch papers.")
 
-# Q&A Section
+
 st.header("Ask Questions")
 if 'papers' in st.session_state:
     selected_paper = st.selectbox(
@@ -49,7 +49,7 @@ if 'papers' in st.session_state:
             else:
                 st.error("Error: Unable to get an answer.")
 
-# Future Directions Section
+
 st.header("Generate Future Research Directions")
 if st.button("Generate Future Directions"):
     response = requests.post(f"{API_URL}/future-directions", json={"topic": topic})

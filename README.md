@@ -1,7 +1,7 @@
 
 ## academic research assistant
 
-### installtion
+### installation
 
 clone the repo
 

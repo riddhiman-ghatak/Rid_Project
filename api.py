@@ -1,4 +1,4 @@
-# api.py
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
@@ -7,12 +7,12 @@ from agents import SearchAgent, QAAgent, FutureWorksAgent
 
 app = FastAPI()
 
-# Initialize agents
+
 search_agent = SearchAgent()
 qa_agent = QAAgent()
 future_works_agent = FutureWorksAgent()
 
-# Request models
+
 class TopicRequest(BaseModel):
     topic: str
 

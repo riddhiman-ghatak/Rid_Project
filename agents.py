@@ -1,4 +1,4 @@
-# agents.py
+
 import os
 from typing import List, Dict
 import arxiv
@@ -10,10 +10,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# Set up the Groq API key
+
 os.environ["GROQ_API_KEY"] = "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"
 
-# Initialize models
+
 llm = ChatGroq(model="llama3-8b-8192")
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
 
@@ -47,7 +47,7 @@ class QAAgent:
             chunk_overlap=200
         )
         
-        # Initialize the QA prompt template
+        
         system_prompt = """You are a research paper analysis assistant. 
         Use the following pieces of retrieved context to answer the question about the research paper. 
         If you don't know the answer, say that you don't know. 
@@ -65,10 +65,10 @@ class QAAgent:
         
     def _create_vectorstore(self, paper_content: str):
         """Create a vector store from paper content."""
-        # Split the content into chunks
+        
         splits = self.text_splitter.create_documents([paper_content])
         
-        # Create vector store
+        
         self.vectorstore = Chroma.from_documents(
             documents=splits,
             embedding=embeddings,
@@ -78,19 +78,19 @@ class QAAgent:
     def answer_question(self, question: str, context: str) -> str:
         """Answer a question based on paper context using RAG."""
         try:
-            # Create or update vector store with the paper content
+            
             self._create_vectorstore(context)
             
-            # Create the retrieval chain
+            
             retriever = self.vectorstore.as_retriever(
                 search_kwargs={"k": 3}
             )
             
-            # Create the QA chain
+            
             doc_chain = create_stuff_documents_chain(llm, self.prompt)
             retrieval_chain = create_retrieval_chain(retriever, doc_chain)
             
-            # Get the answer
+            
             response = retrieval_chain.invoke({
                 "input": question
             })
