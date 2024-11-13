@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import requests
 import pandas as pd
@@ -30,16 +31,23 @@ if 'papers' in st.session_state:
         format_func=lambda x: x['title']
     )
     
-    question = st.text_input("Enter your question:")
-    if st.button("Get Answer"):
-        response = requests.post(
-            f"{API_URL}/qa",
-            json={"question": question, "paper_id": selected_paper['id']}
-        )
-        if response.status_code == 200:
-            st.write("Answer:", response.json()['answer'])
-        else:
-            st.error("Error: Unable to get an answer.")
+    if selected_paper:
+        st.write("Paper Summary:")
+        st.write(selected_paper['summary'])
+        
+        question = st.text_input("Enter your question about this paper:")
+        if st.button("Get Answer"):
+            response = requests.post(
+                f"{API_URL}/qa",
+                json={
+                    "question": question,
+                    "context": selected_paper['summary']
+                }
+            )
+            if response.status_code == 200:
+                st.write("Answer:", response.json()['answer'])
+            else:
+                st.error("Error: Unable to get an answer.")
 
 # Future Directions Section
 st.header("Generate Future Research Directions")

@@ -1,17 +1,16 @@
+# api.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 import uvicorn
 from agents import SearchAgent, QAAgent, FutureWorksAgent
-from database import Neo4jDatabase
 
 app = FastAPI()
 
-# Initialize agents and database
+# Initialize agents
 search_agent = SearchAgent()
 qa_agent = QAAgent()
 future_works_agent = FutureWorksAgent()
-db = Neo4jDatabase()
 
 # Request models
 class TopicRequest(BaseModel):
@@ -19,14 +18,12 @@ class TopicRequest(BaseModel):
 
 class QARequest(BaseModel):
     question: str
-    paper_id: str
+    context: str
 
 @app.post("/search")
 async def search_papers(request: TopicRequest):
     try:
         papers = search_agent.search_papers(request.topic)
-        for paper in papers:
-            db.save_paper(paper)
         return papers
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -34,11 +31,7 @@ async def search_papers(request: TopicRequest):
 @app.post("/qa")
 async def answer_question(request: QARequest):
     try:
-        papers = db.get_papers_by_topic(request.paper_id)
-        if not papers:
-            raise HTTPException(status_code=404, detail="Paper not found")
-        context = papers[0]['summary']
-        answer = qa_agent.answer_question(request.question, context)
+        answer = qa_agent.answer_question(request.question, request.context)
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -46,7 +39,7 @@ async def answer_question(request: QARequest):
 @app.post("/future-directions")
 async def get_future_directions(request: TopicRequest):
     try:
-        papers = db.get_papers_by_topic(request.topic)
+        papers = search_agent.search_papers(request.topic)
         directions = future_works_agent.generate_future_directions(papers)
         return {"directions": directions}
     except Exception as e:

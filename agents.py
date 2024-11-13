@@ -1,14 +1,21 @@
+# agents.py
 import os
-import arxiv
 from typing import List, Dict
-from database import Neo4jDatabase
+import arxiv
 from langchain_groq import ChatGroq
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Set up the Groq API key
 os.environ["GROQ_API_KEY"] = "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"
 
-# Initialize the LLM model for question answering and future works
+# Initialize models
 llm = ChatGroq(model="llama3-8b-8192")
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
 
 class SearchAgent:
     def search_papers(self, topic: str, max_results: int = 10) -> List[Dict]:
@@ -33,34 +40,70 @@ class SearchAgent:
         
         return papers
 
-def store_papers_in_db(papers: List[Dict]):
-    """Store a list of papers in the Neo4j database."""
-    db = Neo4jDatabase()
-    for paper in papers:
-        db.save_paper(paper)
-    db.close()
-
 class QAAgent:
+    def __init__(self):
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
+        
+        # Initialize the QA prompt template
+        system_prompt = """You are a research paper analysis assistant. 
+        Use the following pieces of retrieved context to answer the question about the research paper. 
+        If you don't know the answer, say that you don't know. 
+        Base your answer only on the provided context.
+        
+        Context:
+        {context}"""
+        
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "{input}")
+        ])
+        
+        self.vectorstore = None
+        
+    def _create_vectorstore(self, paper_content: str):
+        """Create a vector store from paper content."""
+        # Split the content into chunks
+        splits = self.text_splitter.create_documents([paper_content])
+        
+        # Create vector store
+        self.vectorstore = Chroma.from_documents(
+            documents=splits,
+            embedding=embeddings,
+            persist_directory="./chroma_db"
+        )
+        
     def answer_question(self, question: str, context: str) -> str:
-        """Answer a question based on a given context from the research paper."""
-        prompt = f"""Given the following research paper context:
-        {context}
-        
-        Please answer this question:
-        {question}
-        
-        Provide a concise and accurate answer based only on the information given."""
-
+        """Answer a question based on paper context using RAG."""
         try:
-            response = llm.generate(prompt)
-            return response['response']
+            # Create or update vector store with the paper content
+            self._create_vectorstore(context)
+            
+            # Create the retrieval chain
+            retriever = self.vectorstore.as_retriever(
+                search_kwargs={"k": 3}
+            )
+            
+            # Create the QA chain
+            doc_chain = create_stuff_documents_chain(llm, self.prompt)
+            retrieval_chain = create_retrieval_chain(retriever, doc_chain)
+            
+            # Get the answer
+            response = retrieval_chain.invoke({
+                "input": question
+            })
+            
+            return response["answer"]
+            
         except Exception as e:
-            print(f"Error generating answer: {e}")
-            return "There was an error generating the answer."
+            print(f"Error in QA process: {e}")
+            return f"Error generating answer: {str(e)}"
 
 class FutureWorksAgent:
     def generate_future_directions(self, papers: List[Dict]) -> str:
-        """Generate future research directions based on a list of paper summaries."""
+        """Generate future research directions based on paper summaries."""
         summaries = "\n".join([f"Title: {p['title']}\nSummary: {p['summary']}\n" for p in papers])
         
         prompt = f"""Based on these recent research papers:
@@ -73,8 +116,8 @@ class FutureWorksAgent:
         3. Technical challenges to overcome"""
 
         try:
-            response = llm.generate(prompt)
-            return response['response']
+            response = llm.invoke(prompt)
+            return response
         except Exception as e:
             print(f"Error generating future directions: {e}")
-            return "There was an error generating future research directions."
+            return "Error generating future research directions."
