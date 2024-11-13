@@ -2,17 +2,19 @@
 ## academic research assistant
 
 ### installtion
-*Clone the repository**:
+
+clone the repo
+
    ```bash
    git clone https://github.com/riddhiman-ghatak/Rid_Project.git
    ```
-    ```bash
+   ```bash
    cd Rid_Project
    ```
-    ```bash
+   ```bash
    python -m venv venv
    ```
-    ```bash
+   ```bash
    venv\Scripts\activate
    ```
    ```bash
