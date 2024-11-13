@@ -1,4 +1,4 @@
-# attentions.ai
+
 ## academic research assistant
 
 ### installtion
