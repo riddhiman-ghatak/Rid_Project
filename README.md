@@ -21,7 +21,10 @@ clone the repo
    pip install -r requirements.txt
 
    ```
-   
+   ```bash
+   pip install chromadb
+
+   ```
    then start the server
    ```bash
    python api.py
